@@ -32,6 +32,8 @@ echo "REPOSITORY set $REPOSITORY_NAME"
 
 cd $REPOSITORY_DIR
 
+### paths ordered by semver
+### see: https://stackoverflow.com/questions/40390957/how-to-sort-semantic-versions-in-bash
 paths=$(ls)
 for dir in $paths; do get_impl $dir; done
 

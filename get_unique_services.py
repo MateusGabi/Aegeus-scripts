@@ -8,7 +8,14 @@ def main():
 	file = str(sys.argv[1])
 	DATABASE = str(sys.argv[2])
 	REPOSITORY_ANALYSIS_DIR = str(sys.argv[3])
-	METRIC = "class br.unicamp.ic.laser.metrics.StrictServiceImplementationCohesion"
+	METRIC1 = "ServiceInterfaceDataCohesion"
+	METRIC1sigl = "SIDC"
+	METRIC2 = "StrictServiceImplementationCohesion"
+	METRIC2sigl = "SSIC"
+	METRIC3 = "LackOfMessageLevelCohesion"
+	METRIC3sigl = "LoCMes"
+	METRIC4 = "NumberOfOperations"
+	METRIC4sigl = "NO"
 
 	print("===============================")
 	print("DATABASE: {}".format(DATABASE))
@@ -28,7 +35,10 @@ def main():
 
 		for service in uniques:
 			print("SERVICE: *{}*".format(service))
-			subprocess.run(["Rscript", "GenericEvolution.R", "-d", DATABASE, "-s", service, "-m", METRIC, "-o", "{}/images/{}.png".format(REPOSITORY_ANALYSIS_DIR, service)])
+			subprocess.run(["Rscript", "GenericEvolution.R", "-d", DATABASE, "-s", service, "-m", METRIC1, "-o", "{}/images/{}-{}-EVOLUTION.png".format(REPOSITORY_ANALYSIS_DIR, service, METRIC1sigl)])
+			subprocess.run(["Rscript", "GenericEvolution.R", "-d", DATABASE, "-s", service, "-m", METRIC2, "-o", "{}/images/{}-{}-EVOLUTION.png".format(REPOSITORY_ANALYSIS_DIR, service, METRIC2sigl)])
+			subprocess.run(["Rscript", "GenericEvolution.R", "-d", DATABASE, "-s", service, "-m", METRIC3, "-o", "{}/images/{}-{}-EVOLUTION.png".format(REPOSITORY_ANALYSIS_DIR, service, METRIC3sigl)])
+			subprocess.run(["Rscript", "GenericEvolution.R", "-d", DATABASE, "-s", service, "-m", METRIC4, "-o", "{}/images/{}-{}-EVOLUTION.png".format(REPOSITORY_ANALYSIS_DIR, service, METRIC4sigl)])
 
 if __name__ == '__main__':
 	main()

@@ -9,6 +9,7 @@ MAIN_DIR=$PWD
 FILE=.aegeus/git_tags.out
 REPOSITORY_URL=$1
 REPOSITORY_NAME=$2
+RELEASES=$3
 
 # create aegeus path
 mkdir -p $HOMEDIR
@@ -28,7 +29,9 @@ git clone $REPOSITORY_URL .
 
 # create new fale
 # use "| head -n <number>" to limit n last releases
-tags=$(git tag --sort=-version:refname | grep -v -E "ea|rc|beta|version" | head -n 20)
+tags=$(git tag --sort=-version:refname | grep -v -E "ea|rc|beta|version" | head -n $RELEASES)
+
+echo "GETTING LAST #$RELEASES RELEASES"
 
 for i in $tags; do git_clone_from_tag $i; done 
 
