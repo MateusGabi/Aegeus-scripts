@@ -4,6 +4,8 @@ import subprocess
 import sys
 import random
 from datetime import datetime
+import matplotlib.pyplot as plt
+import numpy as np
 
 def main():
 	file = str(sys.argv[1])
@@ -57,8 +59,20 @@ def main():
 			services_arr = drop_version(services_arr, version="master")
 			services_dict = group_by(services_arr, "name")
 			services_dict = group_by_metrics(services_dict)
+			sort_versions(services_dict)
 
 			generate_graphs(DATABASE, services_dict, metrics, path=REPOSITORY_ANALYSIS_DIR)
+
+def sort_key(item):
+	version = item['version']
+	v1 = version.replace("v", "")
+	return list(map(int, v1.split('.')))
+
+def sort_versions(services):
+	for service in services.keys():
+		for metric in services[service].keys():
+			observations = services[service][metric]
+			observations.sort(key=sort_key)
 
 def drop_version(arr, version):
 	def not_version(item):
@@ -69,6 +83,7 @@ def drop_version(arr, version):
 	return ret
 
 def generate_graphs(db, services, metrics, path):
+	i = 1
 	for service in services.keys():
 		print("SERVICE: '{}'".format(service))
 		v0 = has_variation_in_the_value_of_metrics(services, service, metrics[0].get("name"))
@@ -77,14 +92,70 @@ def generate_graphs(db, services, metrics, path):
 		v3 = has_variation_in_the_value_of_metrics(services, service, metrics[3].get("name"))
 
 		if v0:
+			generate_using_matplotlib(
+				i=i,
+				filename="{}/images/{}-{}-EVOLUTION-matplot.png".format(path, service, metrics[0].get("sigla")),
+				service_name=service,
+				metric=metrics[0],
+				observations=get_observations(services, service, metrics[0].get("name"),
+				just_value=False)
+			)
 			subprocess.run(["Rscript", "GenericEvolution.R", "-d", db, "-s", service, "-m", metrics[0].get("name"), "-o", "{}/images/{}-{}-EVOLUTION.png".format(path, service, metrics[0].get("sigla"))])	
 		if v1:
+			generate_using_matplotlib(
+				i=i+1,
+				filename="{}/images/{}-{}-EVOLUTION-matplot.png".format(path, service, metrics[1].get("sigla")),
+				service_name=service,
+				metric=metrics[1],
+				observations=get_observations(services, service, metrics[1].get("name"),
+				just_value=False)
+			)
 			subprocess.run(["Rscript", "GenericEvolution.R", "-d", db, "-s", service, "-m", metrics[1].get("name"), "-o", "{}/images/{}-{}-EVOLUTION.png".format(path, service, metrics[1].get("sigla"))])
 		if v2:
+			generate_using_matplotlib(
+				i=i+2,
+				filename="{}/images/{}-{}-EVOLUTION-matplot.png".format(path, service, metrics[2].get("sigla")),
+				service_name=service,
+				metric=metrics[2],
+				observations=get_observations(services, service, metrics[2].get("name"),
+				just_value=False)
+			)
 			subprocess.run(["Rscript", "GenericEvolution.R", "-d", db, "-s", service, "-m", metrics[2].get("name"), "-o", "{}/images/{}-{}-EVOLUTION.png".format(path, service, metrics[2].get("sigla"))])
 		if v3:
+			generate_using_matplotlib(
+				i=i+3,
+				filename="{}/images/{}-{}-EVOLUTION-matplot.png".format(path, service, metrics[3].get("sigla")),
+				service_name=service,
+				metric=metrics[3],
+				observations=get_observations(services, service, metrics[3].get("name"),
+				just_value=False)
+			)
 			subprocess.run(["Rscript", "GenericEvolution.R", "-d", db, "-s", service, "-m", metrics[3].get("name"), "-o", "{}/images/{}-{}-EVOLUTION.png".format(path, service, metrics[3].get("sigla"))])
 
+		i = i + 4
+
+def get_observations(services, service_name, metric_name, just_value=True):
+	values = services[service_name][metric_name]
+	print("{} observations for {}->{}".format(len(values), service_name, metric_name))
+
+	if not just_value:
+		return [{'value': float(item.get("value")), 'version': item.get('version')} for item in values]
+
+	return [float(item.get("value")) for item in values]
+
+def generate_using_matplotlib(service_name, metric, observations, filename, format="png", i=0):	
+	plt.figure(i, figsize=(16,12))
+	x = np.array(range(0, len(observations)))
+	y = np.array(list(map(lambda i: i.get("value"), observations)))
+	
+	plt.xlabel("Releases")
+	plt.ylabel("Value")
+	plt.title("{}::{}".format(service_name, metric.get("name")))
+
+	my_xticks = list(map(lambda i: i.get("version"), observations))
+	plt.xticks(x, my_xticks, rotation='vertical')
+	plt.plot(x, y)
+	plt.savefig(fname=filename, format=format,)
 
 def has_variation_in_the_value_of_metrics(services, service_name, metric_name):
 	# service exist?
@@ -101,10 +172,7 @@ def has_variation_in_the_value_of_metrics(services, service_name, metric_name):
 	else:
 		raise Exception("Metric {} donot exist on dict.".format(metric_name))
 
-	values = services[service_name][metric_name]
-	print("{} observations for {}->{}".format(len(values), service_name, metric_name))
-
-	observations = [float(item.get("value")) for item in values]
+	observations = get_observations(services, service_name, metric_name)
 	anomaly = has_anomaly(observations)
 	print("Has anomaly on observation {}->{}? {}".format(service_name, metric_name, anomaly))
 	print(observations)
@@ -113,6 +181,10 @@ def has_variation_in_the_value_of_metrics(services, service_name, metric_name):
 
 def has_anomaly(observations):
 	previous_value = observations[0]
+
+	if len(observations) < 2:
+		return False
+
 	for observation in observations:
 		if observation == previous_value:
 			# continue
@@ -123,7 +195,6 @@ def has_anomaly(observations):
 	return False
 
 def group_by_metrics(services_dict):
-	# grouping by metrics
 	new_dict = {}
 	for service in services_dict.keys():
 		arr_of_evaluatings = services_dict[service]
@@ -167,37 +238,6 @@ def to_array(lines):
 
 
 	return arr
-
-# def should_generate_graph(db, service):
-# 	print("Checking if service '{}' is possible to generate graph.".format(service))
-# 	lines = db.readlines()
-
-# 	collect = retrieve_service_row(lines, service)
-
-# 	if len(collect) == 0:
-# 		print("Service '{}' was not evaluated.".format(service))
-
-# def retrieve_service_row(lines, service):
-# 	collect = []
-
-# 	for line in lines:
-# 		row = line.split(",")
-
-# 		service_name = row[0]
-# 		version = row[1]
-# 		metric = row[2]
-# 		value = row[3]
-
-# 		if service_name == service:
-# 			print("found {}".format(service))
-# 			collect.append({
-# 				'service_name': service_name,
-# 				'version': version,
-# 				'metric': metric,
-# 				'value': value
-# 			})
-	
-# 	return collect
 
 if __name__ == '__main__':
 	main()
