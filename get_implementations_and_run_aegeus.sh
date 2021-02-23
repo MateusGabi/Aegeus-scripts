@@ -15,7 +15,9 @@ get_impl() {
 	# essa query tem que ser por cada projeto
 	# sitewhere use: find "$(pwd)" | grep Impl
 	# others: $(find "$(pwd)" | grep Controller.java)
-	files=$(find "$(pwd)" | grep $PATTERN_SERVICES)
+	# files=$(find "$(pwd)" | grep $PATTERN_SERVICES)
+	# find files with @RestController
+	files=$(find "$(pwd)" -type f | xargs grep -Hn "@RestController" | grep $PATTERN_SERVICES | tr ":" "\n" | grep $PATTERN_SERVICES)
 	for i in $files; do
 		echo ">> Service: $i"
 		echo ">> VERSION: $1"
