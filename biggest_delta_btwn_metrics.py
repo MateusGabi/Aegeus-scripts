@@ -5,12 +5,14 @@ import json
 
 file = "/home/mgm/.aegeus/repos/spinnaker-gate/analysis/final.csv"
 
+
 def __filter_expected_rows(controller, metric, obj):
     return obj.get('controller') == controller and obj.get('metric') == metric and obj.get('version') != "master"
 
 
 def filter_expected_rows(controller, metric):
     return lambda x: __filter_expected_rows(controller, metric, x)
+
 
 def str_to_dict(row):
     controller, version, metric, value = row.split(",")
@@ -78,20 +80,26 @@ def filter_by_metric_and_controller(controller, metric, lines):
         just_version_and_value, filter(filter_expected_rows(controller, metric), map(str_to_dict, lines)))))))
     return t
 
+
 def std_deviation(values):
     return np.std(values)
+
 
 def __just_key(key, obj):
     return obj.get(key)
 
+
 def just_key(key):
     return lambda x: __just_key(key, x)
+
 
 def get_controllers(lines):
     return list(set(map(just_key('controller'), map(str_to_dict, lines))))
 
+
 def get_metrics(lines):
     return list(set(map(just_key('metric'), map(str_to_dict, lines))))
+
 
 if __name__ == '__main__':
     expect_service = "AwsCodeBuildController"
@@ -106,7 +114,7 @@ if __name__ == '__main__':
         pairs = np.array(np.meshgrid(controllers, metrics)).T.reshape(-1, 2)
 
         a = []
-        
+
         for pair in pairs:
             c = pair[0]
             m = pair[1]
@@ -114,13 +122,15 @@ if __name__ == '__main__':
             f = filter_by_metric_and_controller(c, m, lines)
             values = map(lambda i: i[1], f)
             lv = list(values)
-            
+
             a.append((c, m, std_deviation(lv), np.var(lv)))
 
-        dtype = [('controller', 'S100'), ('metric', 'S100'), ('deviation', float), ('variance', float)]
+        dtype = [('controller', 'S100'), ('metric', 'S100'),
+                 ('deviation', float), ('variance', float)]
         aarr = np.array(a, dtype=dtype)
         b = np.sort(aarr, order=['deviation'])
         b = b[::-1]
         # print(json.dumps(b))
         for c in b:
-            print("{},{},{},{}".format(c[0].decode('UTF-8'), c[1].decode('UTF-8'), c[2], c[3]))
+            print("{},{},{},{}".format(c[0].decode(
+                'UTF-8'), c[1].decode('UTF-8'), c[2], c[3]))
